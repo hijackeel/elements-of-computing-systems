@@ -1,0 +1,11 @@
+// Full Adder: sum   = LSB of a + b + c
+//             carry = MSB of a + b + c
+
+CHIP FullAdder {
+  IN a, b, c;
+  OUT sum, carry;
+  PARTS:
+  HalfAdder(a=c, b=b, sum=ha1sum, carry=ha1carry);
+  HalfAdder(a=a, b=ha1sum, sum=sum, carry=ha2carry);
+  Or(a=ha2carry, b=ha1carry, out=carry);
+}
