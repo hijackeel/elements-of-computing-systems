@@ -1,0 +1,49 @@
+// 16-bit Arithmetic Logic Unit
+
+CHIP ALU {
+  IN  x[16], y[16], // Two 16-bit data inputs.
+      zx,           // Zero the x input.
+      nx,           // Not the x input.
+                    //  If both zx and nx are selected, zero before negation.
+      zy,           // Zero the y input.
+      ny,           // Not the y input.
+                    //  If both zy and ny are selected, zero before negation.
+       f,           // Function code: 1 for Add, 0 for And.
+      no;           // Not the out output.
+  OUT out[16],      // 16-bit output.
+      zr,           // True iff out=0.
+      ng;           // True iff out<0.
+
+  PARTS:
+  // zx
+  Mux16(a=true, b=false, sel=zx, out=xzeromask);
+  And16(a=x, b=xzeromask, out=zeroorx);
+  
+  // nx
+  Not16(in=zeroorx, out=notzeroornotx);
+  Mux16(a=zeroorx, b=notzeroornotx, sel=nx, out=xzxnx);
+
+  // zy
+  Mux16(a=true, b=false, sel=zy, out=yzeromask);
+  And16(a=y, b=yzeromask, out=zeroory);
+  
+  // ny
+  Not16(in=zeroory, out=notzeroornoty);
+  Mux16(a=zeroory, b=notzeroornoty, sel=ny, out=yzyny);
+
+  // f
+  And16(a=xzxnx, b=yzyny, out=andxy);
+  Add16(a=xzxnx, b=yzyny, out=addxy);
+  Mux16(a=andxy, b=addxy, sel=f, out=preout);
+
+  // no / out / ng
+  Not16(in=preout, out=notout);
+  Mux16(a=preout, b=notout, sel=no, out=out, out[15]=ng, // ng=MSB
+        out[0..7]=lowerbyte, out[8..15]=upperbyte); 
+
+  // zr
+  Or8Way(in=lowerbyte,  out=lbor);
+  Or8Way(in=upperbyte, out=ubor);
+  Or(a=lbor, b=ubor, out=wordor);
+  Not(in=wordor, out=zr);
+}
