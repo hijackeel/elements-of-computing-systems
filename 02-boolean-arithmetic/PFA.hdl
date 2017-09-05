@@ -1,0 +1,13 @@
+// Partial Full Adder for use inside 4-bit Carry Lookahead Adder.
+
+CHIP PFA {
+  IN a, b, carryin;
+  OUT sum, generate, propagate;
+
+  PARTS:
+  Xor(a=carryin, b=b, out=xorcarryinb);
+  Xor(a=xorcarryinb, b=a, out=sum);
+
+  And(a=a, b=b, out=generate);
+  Or(a=a, b=b, out=propagate);
+}
