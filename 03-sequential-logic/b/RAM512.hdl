@@ -1,0 +1,24 @@
+// 512-Register Memory
+// Function: out(t)=RAM[address(t)](t)
+//           If load(t-1) then RAM[address(t)](t)=in(t-1)
+
+CHIP RAM512 {
+  IN  in[16], address[9], load;
+  OUT out[16];
+
+  PARTS:
+  DMux8Way(in=load, sel=address[6..8],
+           a=load000xxxxxx, b=load001xxxxxx, c=load010xxxxxx, d=load011xxxxxx,
+           e=load100xxxxxx, f=load101xxxxxx, g=load110xxxxxx, h=load111xxxxxx);
+  RAM64(in=in, address=address[0..5], load=load000xxxxxx, out=out000xxxxxx);
+  RAM64(in=in, address=address[0..5], load=load001xxxxxx, out=out001xxxxxx);
+  RAM64(in=in, address=address[0..5], load=load010xxxxxx, out=out010xxxxxx);
+  RAM64(in=in, address=address[0..5], load=load011xxxxxx, out=out011xxxxxx);
+  RAM64(in=in, address=address[0..5], load=load100xxxxxx, out=out100xxxxxx);
+  RAM64(in=in, address=address[0..5], load=load101xxxxxx, out=out101xxxxxx);
+  RAM64(in=in, address=address[0..5], load=load110xxxxxx, out=out110xxxxxx);
+  RAM64(in=in, address=address[0..5], load=load111xxxxxx, out=out111xxxxxx);
+  Mux8Way16(a=out000xxxxxx, b=out001xxxxxx, c=out010xxxxxx, d=out011xxxxxx,
+            e=out100xxxxxx, f=out101xxxxxx, g=out110xxxxxx, h=out111xxxxxx,
+            sel=address[6..8], out=out);
+}
