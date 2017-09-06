@@ -1,0 +1,24 @@
+// 64-Register Memory
+// Function: out(t)=RAM[address(t)](t)
+//           If load(t-1) then RAM[address(t)](t)=in(t-1)
+
+CHIP RAM64 {
+  IN  in[16], address[6], load;
+  OUT out[16];
+
+  PARTS:
+  DMux8Way(in=load, sel=address[3..5],
+           a=load000xxx, b=load001xxx, c=load010xxx, d=load011xxx,
+           e=load100xxx, f=load101xxx, g=load110xxx, h=load111xxx);
+  RAM8(in=in, address=address[0..2], load=load000xxx, out=out000xxx);
+  RAM8(in=in, address=address[0..2], load=load001xxx, out=out001xxx);
+  RAM8(in=in, address=address[0..2], load=load010xxx, out=out010xxx);
+  RAM8(in=in, address=address[0..2], load=load011xxx, out=out011xxx);
+  RAM8(in=in, address=address[0..2], load=load100xxx, out=out100xxx);
+  RAM8(in=in, address=address[0..2], load=load101xxx, out=out101xxx);
+  RAM8(in=in, address=address[0..2], load=load110xxx, out=out110xxx);
+  RAM8(in=in, address=address[0..2], load=load111xxx, out=out111xxx);
+  Mux8Way16(a=out000xxx, b=out001xxx, c=out010xxx, d=out011xxx,
+            e=out100xxx, f=out101xxx, g=out110xxx, h=out111xxx,
+            sel=address[3..5], out=out);
+}
