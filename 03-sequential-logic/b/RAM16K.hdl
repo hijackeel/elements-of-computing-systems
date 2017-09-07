@@ -1,0 +1,24 @@
+// 16384-Register Memory
+// Function: out(t)=RAM[address(t)](t)
+//           If load(t-1) then RAM[address(t)](t)=in(t-1)
+
+CHIP RAM16K {
+  IN  in[16], address[14], load;
+  OUT out[16];
+
+  PARTS:
+  DMux4Way(in=load, sel=address[12..13],
+           a=load00xxxxxxxxxxxx, b=load01xxxxxxxxxxxx,
+           c=load10xxxxxxxxxxxx, d=load11xxxxxxxxxxxx);
+  RAM16K(in=in, address=address[0..11], load=load00xxxxxxxxxxxx,
+                                          out=out00xxxxxxxxxxxx);
+  RAM16K(in=in, address=address[0..11], load=load01xxxxxxxxxxxx,
+                                          out=out01xxxxxxxxxxxx);
+  RAM16K(in=in, address=address[0..11], load=load10xxxxxxxxxxxx,
+                                          out=out10xxxxxxxxxxxx);
+  RAM16K(in=in, address=address[0..11], load=load11xxxxxxxxxxxx,
+                                          out=out11xxxxxxxxxxxx);
+  Mux4Way16(a=out00xxxxxxxxxxxx, b=out01xxxxxxxxxxxx,
+            c=out10xxxxxxxxxxxx, d=out11xxxxxxxxxxxx,
+            sel=address[12..13], out=out);
+}
