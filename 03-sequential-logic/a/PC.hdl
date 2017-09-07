@@ -1,0 +1,17 @@
+// 16-bit Counter
+// Function: If reset(t-1) then out(t)=0,
+//            else if load(t-1) then out(t)=in(t-1),
+//              else if inc(t-1) then out(t)=out(t-1)+1,
+//                else out(t)=out(t-1).
+
+CHIP PC {
+  IN  in[16], inc, load, reset;
+  OUT out[16];
+
+  PARTS:
+  Inc16(in=feedback, out=incfeedback);
+  Mux16(a=feedback, b=incfeedback, sel=inc, out=mux1out);
+  Mux16(a=mux1out, b=in, sel=load, out=mux2out);
+  Mux16(a=mux2out, b=false, sel=reset, out=mux3out);
+  Register(in=mux3out, load=true, out=feedback, out=out);
+}
