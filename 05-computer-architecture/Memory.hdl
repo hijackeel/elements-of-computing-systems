@@ -1,0 +1,41 @@
+// Complete data memory address space.
+//     0 - 16383 = 16K RAM
+// 16384 - 24575 = 8K Screen memory map
+// 24576         = 16-bit Keyboard memory map
+// Access to any address > 24576 is invalid.
+
+// Function: out(t)=RAM[address(t)](t)
+//           If load(t-1) then Memory[address(t-1)](t)=in(t-1)
+//            where t is the current time unit or cycle
+
+
+CHIP Memory {
+  IN  in[16], address[15], load;
+  OUT out[16];
+
+  PARTS:
+
+  DMux4Way(in=load, sel=address[13..14],
+            a=load00xxxxxxxxxxxxx,
+            b=load01xxxxxxxxxxxxx,
+            c=load10xxxxxxxxxxxxx,
+            d=load11xxxxxxxxxxxxx);
+
+  Or(a=load00xxxxxxxxxxxxx,
+     b=load01xxxxxxxxxxxxx,
+   out=load0xxxxxxxxxxxxxx);
+
+  RAM16K(in=in, address=address[0..13], load=load0xxxxxxxxxxxxxx,
+                                          out=out0xxxxxxxxxxxxxx);
+
+  Screen(in=in, address=address[0..12], load=load10xxxxxxxxxxxxx,
+                                          out=out10xxxxxxxxxxxxx);
+
+  Keyboard(out=out110000000000000);
+
+  Mux4Way16(a=out0xxxxxxxxxxxxxx,
+            b=out0xxxxxxxxxxxxxx,
+            c=out10xxxxxxxxxxxxx,
+            d=out110000000000000, sel=address[13..14],
+          out=out);
+}
