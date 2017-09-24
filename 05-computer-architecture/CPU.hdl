@@ -1,0 +1,120 @@
+// Central Processing Unit
+
+/* The Hack CPU consists of an ALU, two registers named A and D, and a program
+counter named PC. The CPU is designed to fetch and execute instructions written
+in the Hack machine language.
+
+Function:
+Executes the inputted instruction according to the Hack machine language
+specification. The D and A in the language specification refer to CPU-resident
+registers, while M refers to the external memory location addressed by A, i.e.
+to Memory[A]. The inM input holds the value of this location.
+
+If the current instruction needs to write a value to M, the value is placed in
+outM, the address of the target location is placed in the addressM output, and
+the writeM control bit is asserted. (When writeM==0, any value may appear in
+outM).
+
+The outM and writeM outputs are combinational: 
+they are affected instantaneously by the execution of the current instruction.
+
+The addressM and pc outputs are clocked:
+although they are affected by the execution of the current instruction, they
+commit to their new values only in the next time step.
+
+If reset=1, then the CPU jumps to address 0 (i.e. sets pc=0 in the next time
+step) rather than to the address resulting from executing the current
+instruction. 
+*/
+
+
+CHIP CPU {
+  IN  inM[16],         // M value input (M = contents of RAM[A])
+                       //  -> from data memory (RAM).
+
+      instruction[16], // Instruction for execution
+                       //  -> from instruction memory (ROM).
+
+/*    16-bit word can be an Addressing instruction or a Compute instruction:
+       i xx a cccccc ddd jjj
+
+       A-instruction: i=0,
+                      other bits represent 15-bit constant to be loaded into A.
+
+       C-instruction: i=1,
+                      a-bit  - will ALU operate on A register or Memory input?
+                      c-bits - which function will ALU compute?
+                      d-bits - which registers will be enabled to store ALU out?
+                      j-bits - when does a jump/goto need to occur?
+                                (A must first be set to jump address with an
+                                  A-instruction.)
+*/
+
+      reset;           // Restart current program (reset=1)
+                       //  or continue executing (reset=0).
+
+  OUT outM[16],        // M value output --------------\
+      writeM,          // Write to M?                   }-> to data memory
+      addressM[15],    // Address of M in data memory _/
+      pc[15];          // Address of next instruction -> to instruction memory
+
+  PARTS:
+
+  // i-bit determines input for A.
+  Mux16(a=instruction, b=outALU, sel=instruction[15], out=outALUorInstruct);
+  // i-bit and left d-bit determine whether A is loaded.
+  // (NOT i-bit) OR (i-bit AND left d-bit) = (NOT i-bit) OR left d-bit
+  Not(in=instruction[15], out=notI);
+  Or(a=notI, b=instruction[5], out=loadA);
+  ARegister(in=outALUorInstruct, load=loadA, out=outA, out[0..14]=addressM);
+
+  // i-bit AND a-bit determine whether A or M is operated on by ALU.
+  And(a=instruction[15], b=instruction[12], out=selAM);
+  // Operate on A when a-bit = 0. Operate on M when a-bit = 1.
+  Mux16(a=outA, b=inM, sel=selAM, out=outAM);
+
+  // i-bit AND middle d-bit determine whether D is loaded.
+  And(a=instruction[15], b=instruction[4], out=loadD);
+  DRegister(in=outALU, load=loadD, out=outD);
+
+  // (i-bit AND c-bit) for each c-bit controls ALU function.
+  And(a=instruction[15], b=instruction[11], out=inZX);
+  And(a=instruction[15], b=instruction[10], out=inNX);
+  And(a=instruction[15],  b=instruction[9], out=inZY);
+  And(a=instruction[15],  b=instruction[8], out=inNY);
+  And(a=instruction[15],  b=instruction[7], out=inF);
+  And(a=instruction[15],  b=instruction[6], out=inNO);
+  ALU(x=outD, y=outAM,
+      zx=inZX,
+      nx=inNX,
+      zy=inZY,
+      ny=inNY,
+       f=inF,
+      no=inNO,
+      out=outALU, out=outM, zr=outZR, ng=outNG);
+
+  // i-bit, j-bits, ALU zr-bit, and ALU ng-bit determine whether PC is loaded.
+  // Left j-bit:   jump if ALU out < 0 i.e. ng = 1
+  //  i-bit AND left j-bit AND ng
+  // Middle j-bit: jump if ALU out = 0 i.e. zr = 1
+  //  i-bit AND middle j-bit AND zr
+  // Right j-bit:  jump if ALU out > 0 i.e. ng = 0 and zr = 0
+  //  i-bit AND right j-bit AND (NOT ng) AND (NOT zr)
+  // OR the three logic statements above.
+  // AND the i-bit at the end to save a couple gates.
+  And(a=instruction[2], b=outNG, out=JLT);
+  And(a=instruction[1], b=outZR, out=JEQ);
+  Not(in=outNG, out=nonnegative);
+  Not(in=outZR, out=nonzero);
+  And(a=nonnegative, b=nonzero, out=positive);
+  And(a=instruction[0], b=positive, out=JGT);
+  Or(a=JLT, b=JEQ, out=JLE);
+  Or(a=JLE, b=JGT, out=JMP);
+  And(a=instruction[15], b=JMP, out=loadPC);
+  // PC load takes priority over inc; if not load, then inc.
+  PC(in=outA, inc=true, load=loadPC, reset=reset, out[0..14]=pc);
+
+  // i-bit AND right d-bit determine whether M is loaded,
+  //  i.e. whether CPU's writeM output is set.
+  And(a=instruction[15], b=instruction[3], out=writeM);
+}
